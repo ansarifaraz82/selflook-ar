@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -12,7 +11,7 @@ import WardrobePanel from './components/WardrobePanel';
 import OutfitStack from './components/OutfitStack';
 import { generateVirtualTryOnImage, generatePoseVariation, editImageWithPrompt } from './services/geminiService';
 import { OutfitLayer, WardrobeItem, CreationItem } from './types';
-import { DownloadIcon, AlertTriangleIcon, PlayIcon } from './components/icons';
+import { DownloadIcon, AlertTriangleIcon, PlayIcon, SmartphoneIcon } from './components/icons';
 import { defaultWardrobe } from './wardrobe';
 import Footer from './components/Footer';
 import { getFriendlyErrorMessage } from './lib/utils';
@@ -77,6 +76,27 @@ const App: React.FC = () => {
   const [showStartOverModal, setShowStartOverModal] = useState(false);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
   const [currentBackground, setCurrentBackground] = useState<string>('');
+  
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   useEffect(() => {
     const savedData = localStorage.getItem(SAVED_OUTFIT_KEY);
@@ -711,6 +731,27 @@ const App: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+       {/* Install App Button */}
+       <AnimatePresence>
+        {deferredPrompt && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-6 z-[100]"
+          >
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center gap-2 bg-gray-900 text-white px-4 py-3 rounded-full shadow-xl hover:bg-gray-800 transition-colors font-semibold"
+            >
+              <SmartphoneIcon className="w-5 h-5" />
+              <span>Install App</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Footer isOnDressingScreen={!!modelImageUrl} />
     </div>
   );
